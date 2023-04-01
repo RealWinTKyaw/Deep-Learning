@@ -2,17 +2,18 @@ import matplotlib.pyplot as plt
 import torch
 import torchvision
 from torchvision.datasets import ImageFolder
-from torchvision.transforms import ToTensor, Compose, Resize, RandomHorizontalFlip, Grayscale
+from torchvision.transforms import ToTensor, Compose, Resize, RandomHorizontalFlip, Grayscale, Normalize
 import torch.optim as optim
 import torch.nn.functional as F
 import torch.nn as nn
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, f1_score, precision_score, recall_score
 
 def create_dataset(root, transformation):
     dataset = ImageFolder(root, transformation)
     return dataset
 
 def produce_loader(data, batch_size, sampler=None):
-    loader = torch.utils.data.DataLoader(data, batch_size = batch_size, sampler=sampler, shuffle = False)
+    loader = torch.utils.data.DataLoader(data, batch_size = batch_size, sampler=sampler, shuffle = True)
     return loader
 
 def visualize_data(dataset, figsize=(8,8), axes=3):
@@ -37,13 +38,17 @@ def visualize_data(dataset, figsize=(8,8), axes=3):
     indices = []
     plt.show()
 
-def test(device, model, data_loader, criterion, verbose=False):
+def test(device, model, data_loader, criterion=nn.CrossEntropyLoss(), get_predictions=False):
     # Use cross-entropy loss function
     model.eval()
     # Initialize epoch loss and accuracy
     epoch_loss = 0.0
     correct = 0
     total = 0
+    # Get list of predictions for confusion matrix
+    if get_predictions:
+        true_labels = torch.tensor([]).to(device)
+        model_preds = torch.tensor([]).to(device)
     # Iterate over test data
     for inputs, labels in data_loader:
         # Get from dataloader and send to device
@@ -55,6 +60,9 @@ def test(device, model, data_loader, criterion, verbose=False):
             outputs = model(inputs)
             _, predicted = torch.max(outputs.data, 1)
             loss = criterion(outputs, labels)
+        if get_predictions:
+            true_labels = torch.cat((true_labels, labels))
+            model_preds = torch.cat((model_preds, predicted)) 
         # Accumulate loss and correct predictions for epoch
         epoch_loss += loss.item()
         total += labels.size(0)
@@ -62,13 +70,14 @@ def test(device, model, data_loader, criterion, verbose=False):
         # Calculate epoch loss and accuracy
     epoch_loss /= len(data_loader)
     epoch_acc = correct/total
-    if verbose:
+    if get_predictions:
+        true_labels = true_labels.type(torch.int64).cpu().numpy()
+        model_preds = model_preds.type(torch.int64).cpu().numpy()
         print(f'Test loss: {epoch_loss:.4f}, Test accuracy: {epoch_acc:.4f}')
+        return true_labels, model_preds, epoch_loss, epoch_acc
     return epoch_loss, epoch_acc
 
-def train(device, model, train_loader, valid_loader, test_loader, optimizer, epochs = 1):
-    # Use cross-entropy loss function
-    criterion = nn.CrossEntropyLoss()
+def train(device, model, train_loader, valid_loader, optimizer, criterion=nn.CrossEntropyLoss(), epochs=1):
     # Performance curves data
     train_losses = []
     train_accuracies = []
@@ -116,3 +125,10 @@ def train(device, model, train_loader, valid_loader, test_loader, optimizer, epo
         val_accuracies.append(epoch_acc)
         print(f'--- Epoch {epoch+1}/{epochs}: Val loss: {epoch_loss:.4f}, Val accuracy: {epoch_acc:.4f}')      
     return train_losses, train_accuracies, val_losses, val_accuracies
+
+def show_metrics(true_labels, model_preds):
+    cm = confusion_matrix(true_labels, model_preds)
+    ConfusionMatrixDisplay(cm, display_labels=['normal', 'pneumonia']).plot()
+    print(f'Precision: {precision_score(true_labels, model_preds)}')
+    print(f'Recall: {recall_score(true_labels, model_preds)}')
+    print(f'F1 score: {f1_score(true_labels, model_preds)}')
