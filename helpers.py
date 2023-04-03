@@ -13,7 +13,7 @@ def create_dataset(root, transformation):
     return dataset
 
 def produce_loader(data, batch_size, sampler=None):
-    loader = torch.utils.data.DataLoader(data, batch_size = batch_size, sampler=sampler, shuffle = True)
+    loader = torch.utils.data.DataLoader(data, batch_size = batch_size, sampler=sampler, shuffle = False)
     return loader
 
 def visualize_data(dataset, figsize=(8,8), axes=3):
@@ -38,7 +38,7 @@ def visualize_data(dataset, figsize=(8,8), axes=3):
     indices = []
     plt.show()
 
-def test(device, model, data_loader, criterion=nn.CrossEntropyLoss(), get_predictions=False):
+def test(device, model, data_loader, criterion=nn.CrossEntropyLoss(), autoencoder=None, get_predictions=False):
     # Use cross-entropy loss function
     model.eval()
     # Initialize epoch loss and accuracy
@@ -53,6 +53,8 @@ def test(device, model, data_loader, criterion=nn.CrossEntropyLoss(), get_predic
     for inputs, labels in data_loader:
         # Get from dataloader and send to device
         inputs = inputs.to(device)
+        if autoencoder:
+            inputs = autoencoder.get_features(inputs)
         labels = labels.to(device)
         # Compute model output and loss
         # (No grad computation here, as it is the test data)
@@ -77,7 +79,7 @@ def test(device, model, data_loader, criterion=nn.CrossEntropyLoss(), get_predic
         return true_labels, model_preds, epoch_loss, epoch_acc
     return epoch_loss, epoch_acc
 
-def train(device, model, train_loader, valid_loader, optimizer, criterion=nn.CrossEntropyLoss(), epochs=1):
+def train(device, model, train_loader, valid_loader, optimizer, epochs, criterion=nn.CrossEntropyLoss(), autoencoder=None):
     # Performance curves data
     train_losses = []
     train_accuracies = []
@@ -99,6 +101,8 @@ def train(device, model, train_loader, valid_loader, optimizer, criterion=nn.Cro
             # Zero out gradients
             optimizer.zero_grad()
             # Compute model output and loss
+            if autoencoder:
+                inputs = autoencoder.get_features(inputs)
             outputs = model(inputs)
             _, predicted = torch.max(outputs.data, 1)
             loss = criterion(outputs, labels)
@@ -120,7 +124,7 @@ def train(device, model, train_loader, valid_loader, optimizer, criterion=nn.Cro
         print(f'--- Epoch {epoch+1}/{epochs}: Train loss: {epoch_loss:.4f}, Train accuracy: {epoch_acc:.4f}')
         
         # Validation set
-        epoch_loss, epoch_acc = test(device, model, valid_loader, criterion)
+        epoch_loss, epoch_acc = test(device, model, valid_loader, criterion, autoencoder)
         val_losses.append(epoch_loss)
         val_accuracies.append(epoch_acc)
         print(f'--- Epoch {epoch+1}/{epochs}: Val loss: {epoch_loss:.4f}, Val accuracy: {epoch_acc:.4f}')      
