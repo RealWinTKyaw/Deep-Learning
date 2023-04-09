@@ -28,8 +28,9 @@ def visualize_data(dataset, figsize=(8,8), axes=3):
         sample_idx = torch.randint(len(dataset), size=(1,)).item()
         indices.append(sample_idx)
         img, label = dataset[sample_idx]
-        img = img.swapaxes(0,1)
-        img = img.swapaxes(1,2)
+        if not (type(dataset)==list):
+            img = img.swapaxes(0,1)
+            img = img.swapaxes(1,2)
         figure.add_subplot(rows, cols, i)
         plt.title(labels_map[label])
         plt.axis("off")
@@ -124,10 +125,14 @@ def train(device, model, train_loader, valid_loader, optimizer, epochs, criterio
         print(f'--- Epoch {epoch+1}/{epochs}: Train loss: {epoch_loss:.4f}, Train accuracy: {epoch_acc:.4f}')
         
         # Validation set
-        epoch_loss, epoch_acc = test(device, model, valid_loader, criterion, autoencoder)
-        val_losses.append(epoch_loss)
-        val_accuracies.append(epoch_acc)
-        print(f'--- Epoch {epoch+1}/{epochs}: Val loss: {epoch_loss:.4f}, Val accuracy: {epoch_acc:.4f}')      
+        val_loss, val_acc = test(device, model, valid_loader, criterion, autoencoder)
+        if val_acc >= 0.90:
+            torch.save({'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict()}, 
+            f'./{model.__class__.__name__}_{epoch}epochs')
+        val_losses.append(val_loss)
+        val_accuracies.append(val_acc)
+        print(f'--- Epoch {epoch+1}/{epochs}: Val loss: {val_loss:.4f}, Val accuracy: {val_acc:.4f}')      
     return train_losses, train_accuracies, val_losses, val_accuracies
 
 def show_metrics(true_labels, model_preds):
@@ -136,3 +141,33 @@ def show_metrics(true_labels, model_preds):
     print(f'Precision: {precision_score(true_labels, model_preds)}')
     print(f'Recall: {recall_score(true_labels, model_preds)}')
     print(f'F1 score: {f1_score(true_labels, model_preds)}')
+    
+def get_pictures_test(device, model, data_loader, autoencoder=None):
+    # Use cross-entropy loss function
+    model.eval()
+    # Initialize epoch loss and accuracy
+    correct_list = []
+    wrong_list = []
+    true_labels = torch.tensor([]).to(device)
+    model_preds = torch.tensor([]).to(device)
+    # Iterate over test data
+    for inputs, labels in data_loader:
+        # Get from dataloader and send to device
+        inputs_ = inputs.to(device)
+        if autoencoder:
+            inputs_ = autoencoder.get_features(inputs_)
+        labels = labels.to(device)
+        # Compute model output and loss
+        # (No grad computation here, as it is the test data)
+        with torch.no_grad():
+            outputs = model(inputs_)
+            _, predicted = torch.max(outputs.data, 1)
+            true_labels = torch.cat((true_labels, labels))
+            model_preds = torch.cat((model_preds, predicted)) 
+            if (predicted.item() == labels.item()):
+                correct_list.append( (inputs.squeeze().detach().cpu().numpy(), labels.item()) )
+            else:
+                wrong_list.append( (inputs.squeeze().detach().cpu().numpy(), labels.item()) )
+    true_labels = true_labels.type(torch.int64).cpu().numpy()
+    model_preds = model_preds.type(torch.int64).cpu().numpy()
+    return correct_list, wrong_list, true_labels, model_preds
