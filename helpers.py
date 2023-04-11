@@ -12,8 +12,8 @@ def create_dataset(root, transformation):
     dataset = ImageFolder(root, transformation)
     return dataset
 
-def produce_loader(data, batch_size, sampler=None):
-    loader = torch.utils.data.DataLoader(data, batch_size = batch_size, sampler=sampler, shuffle = False)
+def produce_loader(data, batch_size, sampler=None, shuffle=False):
+    loader = torch.utils.data.DataLoader(data, batch_size = batch_size, sampler=sampler, shuffle=shuffle)
     return loader
 
 def visualize_data(dataset, figsize=(8,8), axes=3):
@@ -43,7 +43,7 @@ def test(device, model, data_loader, criterion=nn.CrossEntropyLoss(), autoencode
     # Use cross-entropy loss function
     model.eval()
     # Initialize epoch loss and accuracy
-    epoch_loss = 0.0
+    test_loss = 0.0
     correct = 0
     total = 0
     # Get list of predictions for confusion matrix
@@ -67,18 +67,18 @@ def test(device, model, data_loader, criterion=nn.CrossEntropyLoss(), autoencode
             true_labels = torch.cat((true_labels, labels))
             model_preds = torch.cat((model_preds, predicted)) 
         # Accumulate loss and correct predictions for epoch
-        epoch_loss += loss.item()
+        test_loss += loss.item()
         total += labels.size(0)
         correct += (predicted == labels).sum().item()
         # Calculate epoch loss and accuracy
-    epoch_loss /= len(data_loader)
-    epoch_acc = correct/total
+    test_loss /= len(data_loader)
+    test_acc = correct/total
     if get_predictions:
         true_labels = true_labels.type(torch.int64).cpu().numpy()
         model_preds = model_preds.type(torch.int64).cpu().numpy()
-        print(f'Test loss: {epoch_loss:.4f}, Test accuracy: {epoch_acc:.4f}')
-        return true_labels, model_preds, epoch_loss, epoch_acc
-    return epoch_loss, epoch_acc
+        print(f'Test loss: {test_loss:.4f}, Test accuracy: {test_acc:.4f}')
+        return true_labels, model_preds, test_loss, test_acc
+    return test_loss, test_acc
 
 def train(device, model, train_loader, valid_loader, optimizer, epochs, criterion=nn.CrossEntropyLoss(), autoencoder=None):
     # Performance curves data
@@ -129,7 +129,7 @@ def train(device, model, train_loader, valid_loader, optimizer, epochs, criterio
         if val_acc >= 0.90:
             torch.save({'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict()}, 
-            f'./{model.__class__.__name__}_{epoch}epochs')
+            f'./{model.__class__.__name__}_{epoch+1}epochs')
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
         print(f'--- Epoch {epoch+1}/{epochs}: Val loss: {val_loss:.4f}, Val accuracy: {val_acc:.4f}')      
