@@ -36,7 +36,7 @@ class DeepLearnLinear(torch.nn.Module):
         return x
     
 class DeepLearn(torch.nn.Module):
-    def __init__(self, kernels, hidden, kernel_size, window, hidden_linear,  dropout, labels=2):
+    def __init__(self, kernels, hidden, kernel_size, window, hidden_linear, dropout, labels=2):
         super(DeepLearn, self).__init__()
         
         self.kernels = kernels
