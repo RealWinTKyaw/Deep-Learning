@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 
 class DeepLearnConv(torch.nn.Module):
-    def __init__(self, inputs, outputs, weights, kernel_size, dropout=0.5):
+    def __init__(self, inputs, outputs, weights, kernel_size, dropout):
         super(DeepLearnConv, self).__init__()
         
         self.conv = nn.Conv2d(inputs, outputs, kernel_size = kernel_size)
@@ -20,7 +20,7 @@ class DeepLearnConv(torch.nn.Module):
         return x
     
 class DeepLearnLinear(torch.nn.Module):
-    def __init__(self, inputs, outputs,dropout=0.5):
+    def __init__(self, inputs, outputs, dropout):
         super(DeepLearnLinear, self).__init__()
         
         self.linear = nn.Linear(inputs, outputs)
@@ -36,18 +36,18 @@ class DeepLearnLinear(torch.nn.Module):
         return x
     
 class DeepLearn(torch.nn.Module):
-    def __init__(self, kernels, hidden, kernel_size, window, hidden_linear, dropout, labels=2):
+    def __init__(self, kernels, hidden, kernel_size, window, hidden_linear, dropout=0.5, labels=2):
         super(DeepLearn, self).__init__()
         
         self.kernels = kernels
         self.conv = [DeepLearnConv(hidden[i], hidden[i+1], 
                                     self.kernels[i].view(1, 1, kernel_size, kernel_size).repeat(hidden[i+1], hidden[i], 1, 1), 
-                                    kernel_size,dropout) for i in range(len(hidden)-1)]
+                                    kernel_size, dropout) for i in range(len(hidden)-1)]
         self.conv_combined = nn.Sequential(*self.conv)
         
         self.maxpool = nn.MaxPool2d(window)
         self.flattened = hidden_linear[0]
-        self.linear= [DeepLearnLinear(hidden_linear[i], hidden_linear[i+1],dropout) for i in range(len(hidden_linear)-1)]
+        self.linear= [DeepLearnLinear(hidden_linear[i], hidden_linear[i+1], dropout) for i in range(len(hidden_linear)-1)]
         self.linear_combined = nn.Sequential(*self.linear)
         
         self.output = nn.Linear(hidden_linear[-1], labels)
