@@ -3,13 +3,13 @@ import torch.nn.functional as F
 import torch.nn as nn
 
 class DeepLearnLinear(torch.nn.Module):
-    def __init__(self, inputs, outputs):
+    def __init__(self, inputs, outputs,dropout=0.5):
         super(DeepLearnLinear, self).__init__()
         
         self.linear = nn.Linear(inputs, outputs)
         nn.init.xavier_uniform_(self.linear.weight)
         self.batch_norm = nn.BatchNorm1d(outputs)
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(dropout)
         
     def forward(self, x):
         x = self.linear(x)
@@ -19,12 +19,12 @@ class DeepLearnLinear(torch.nn.Module):
         return x
     
 class ConvEmbed(torch.nn.Module):
-    def __init__(self, inputs, outputs, kernel_size):
+    def __init__(self, inputs, outputs, kernel_size,dropout=0.5):
         super(ConvEmbed, self).__init__()
         
         self.conv = nn.Conv2d(inputs, outputs, kernel_size = kernel_size)
         self.batch_norm = nn.BatchNorm2d(outputs)
-        self.dropout = nn.Dropout2d(0.5)
+        self.dropout = nn.Dropout2d(dropout)
         
     def forward(self, x):
         x = self.conv(x)
@@ -54,7 +54,7 @@ class AttentionLayer(nn.Module):
         return output
     
 class TransformerBlock(torch.nn.Module):
-    def __init__(self, inputs, output):
+    def __init__(self, inputs, output,dropout):
         super(TransformerBlock, self).__init__()
         
         self.residuals = inputs
@@ -66,7 +66,7 @@ class TransformerBlock(torch.nn.Module):
         self.transform = nn.Linear(inputs, inputs)
         self.batch_norm2 = nn.BatchNorm1d(inputs)
         
-        self.output = DeepLearnLinear(inputs, output)
+        self.output = DeepLearnLinear(inputs, output,dropout)
         
     def forward(self, x):
         x = self.attention(x)
@@ -85,15 +85,15 @@ class TransformerBlock(torch.nn.Module):
         return x
     
 class Transformer(nn.Module):
-    def __init__(self, hidden, kernel_size, window, blocks, labels=2):
+    def __init__(self, hidden, kernel_size, window, blocks, dropout,labels=2):
         super(Transformer, self).__init__()
         
-        self.conv = [ConvEmbed(hidden[i], hidden[i+1], kernel_size) for i in range(len(hidden)-1)]
+        self.conv = [ConvEmbed(hidden[i], hidden[i+1], kernel_size,dropout) for i in range(len(hidden)-1)]
         self.conv_combined = nn.Sequential(*self.conv)
         self.maxpool = nn.MaxPool2d(window)
         
         self.flattened = blocks[0]
-        self.blocks = [TransformerBlock(blocks[i], blocks[i+1]) for i in range(len(blocks)-1)]
+        self.blocks = [TransformerBlock(blocks[i], blocks[i+1],dropout) for i in range(len(blocks)-1)]
         self.blocks_combined = nn.Sequential(*self.blocks)
         
         self.output = DeepLearnLinear(blocks[-1], labels)

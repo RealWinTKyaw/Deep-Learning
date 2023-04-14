@@ -141,6 +141,14 @@ def show_metrics(true_labels, model_preds):
     print(f'Precision: {precision_score(true_labels, model_preds)}')
     print(f'Recall: {recall_score(true_labels, model_preds)}')
     print(f'F1 score: {f1_score(true_labels, model_preds)}')
+
+def return_metrics(true_labels,model_preds):
+    cm = confusion_matrix(true_labels, model_preds)
+    p=precision_score(true_labels, model_preds)
+    r=recall_score(true_labels, model_preds)
+    f=f1_score(true_labels, model_preds)
+    return p, r, f
+    
     
 def get_pictures_test(device, model, data_loader, autoencoder=None):
     # Use cross-entropy loss function
