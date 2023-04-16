@@ -49,9 +49,12 @@ class EarlyStopper:
         self.patience = patience
         # Keep track of number of iterations validation loss is increasing
         self.counter = 0
+        # Keep track of model and optimizer for saving
         self.model = model
         self.optimizer = optimizer
+        # Placeholder loss value
         self.max_val_loss = 99999
+        # Check whether autoencoder is used, and if making checkpoints is desired
         self.autoenc = autoenc
         self.checkpoint = checkpoint
 
@@ -122,14 +125,14 @@ def test(device, model, data_loader, criterion=nn.CrossEntropyLoss(), autoencode
 
 # Training function
 def train(device, model, train_loader, val_loader, optimizer, epochs, 
-          criterion=nn.CrossEntropyLoss(), patience=3, autoencoder=None):
+          criterion=nn.CrossEntropyLoss(), patience=3, autoencoder=None, checkpoint=True):
     # Performance curves data
     train_losses = []
     train_accuracies = []
     val_losses = []
     val_accuracies = []
     # Initialise early stopper
-    early_stopper = EarlyStopper(model, optimizer, patience, autoenc=autoencoder)
+    early_stopper = EarlyStopper(model, optimizer, patience, autoencoder, checkpoint)
     
     for epoch in range(epochs):
         # Set model to training mode
@@ -172,8 +175,8 @@ def train(device, model, train_loader, val_loader, optimizer, epochs,
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
         
-        # Save high performing models
-        if val_acc >= 0.90:
+        # Save high performing models, if desired
+        if val_acc >= 0.90 and checkpoint:
             name = f'./{model.__class__.__name__}_{epoch+1}epochs'
             if autoencoder:
                 name += '_withAE'
