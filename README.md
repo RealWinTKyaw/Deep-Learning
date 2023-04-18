@@ -7,7 +7,7 @@ For this project we receive grayscale X-ray images of the chest area and attempt
 <br> In the repository, there are notebooks numbered from 0 to 7. Although they have been seeded, their outcomes may not be deterministic due to batch normalization and dropout techniques. Hence, while notebooks 0 to 5 can be run, they may not produce the necessary files to run all notebooks numbered 6. Therefore, we advise against running them and have included the notebook numbered 7 to verify our best performing models which can be downloaded [here](https://drive.google.com/drive/folders/1zcXmKO0L9nvmTLk23JpvpBmgLlQouqLa?usp=sharing).
 <br>
 ## Further Considerations
-<br> Upon feedback and hingsight, the following improvements could have been made.
+Upon feedback and hingsight, the following improvements could have been made.
 <br>
 <br> 1. Continued training of CNN architecture with higher patience value for EarlyStopper, as validation loss could end up converging much later.
 <br> 2. While random horizontal flip theoretically introduces variance, it may not be the objectively correct thing to do. This is because the heart would end up on the right side of the chest, and consequently the right lung would appear smaller than it should.
